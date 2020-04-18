@@ -5,14 +5,22 @@ import time
 #         'kzc','xin','xrp','zec','gnt','omg','fto','rep',
 #         'zrx','pay','bat','neu','trx','amlt','exy','bob']
 
-coinsSmallVer = ['btc','ltc','eth']
-for x in range(100):
-    for coin in coinsSmallVer:
+
+
+COINS = ['BTC','LTC','ETH']
+
+def print5ClosestOffers(coin, bids, asks):
+    print(coin +"    buy/sell = {}%".format(str(round((1-(asks[0][0]-bids[0][0])/asks[0][0]),4))))
+    print("bids offers({0}:USD):\t\tasks offers({0}:USD):".format(coin))
+    for i in range(5):
+        print(str(bids[i][0])+"\t\t\t\t"+str(asks[i][0]))
+    print()
+
+while True:
+    print(time.asctime( time.localtime(time.time()))+": ")
+    for coin in COINS:
         requestFormat = 'https://bitbay.net/API/Public/{}/orderbook.json'.format(coin)
         respons = requests.get(requestFormat)
-        print("\n"+coin)
-        print("bids offers:\t\t\tasks offers:")
-        for i in range(5):
-            print(str(respons.json()["bids"][i][0])+"\t\t\t\t"+str(respons.json()["asks"][i][0]))
-    print("\n\n\n")
+        print5ClosestOffers(coin,respons.json()["bids"],respons.json()["asks"])
+    print("\n")
     time.sleep(5)

@@ -1,12 +1,21 @@
 import requests
 
 COINS = ['LTC','ETH','TRX','XRP']
-
+profit = 0
 tokok = "https://www.tokok.com/api/v1/depth?symbol={}_BTC"
 bitbay = "https://bitbay.net/API/Public/{}BTC/orderbook.json"
 biki = "https://openapi.biki.com/open/api/market_dept?symbol={}btc&type=step0"
 latoken = "https://api.latoken.com/v2/marketOverview/orderbook/{}_BTC"
 
+fees={}
+fees['tokok'] = 0.002
+fees['bitbay'] = 0.001
+fees['latoken'] = 0.001
+fees['biki'] = 0.0015
+
+def getBtcToPln():
+    respons = requests.get("https://bitbay.net/API/Public/BTCPLN/orderbook.json")
+    return float(respons.json()['asks'][0][0])
 
 def getTokokMarket():
     print("Processing Tokok market")
@@ -56,25 +65,35 @@ def getLatokenMarket():
         latokenMarket[coin] = coinInfo
     return latokenMarket
 
-def handle
+def handleProfitableOffer(fromMarket, asksOffers, toMarket, bidsOffers, crypto):
+    if(float(asksOffers[0][1]) < float(bidsOffers[0][1])):
+        howMuchToBuy = float(asksOffers[0][1])
+    else:
+        howMuchToBuy = float(bidsOffers[0][1])
+    print("Kup {} {} w {} za {}BTC, sprzedaj w {} za {}BTC".format(
+        howMuchToBuy, crypto, fromMarket,asksOffers[0][0],toMarket,bidsOffers[0][0]))
+    global profit
+    profit = profit+howMuchToBuy*(float(bidsOffers[0][0])*(1+fees[toMarket])-float(asksOffers[0][0])*(1-fees[fromMarket]))
+    print("profit = {}BTC".format(profit))
 
-marketsOrderbooks = {}
-marketsOrderbooks['tokok'] = getTokokMarket()
-marketsOrderbooks['bitbay'] = getBitbayMarket()
-marketsOrderbooks['biki'] = getBikiMarket()
-marketsOrderbooks['latoken'] = getLatokenMarket()
 
-
-for marketName, orderbook in marketsOrderbooks.items():
-    print(marketName)
-    for crypto, orders in orderbook.items():
-        print("Sprawdzam {} z {}".format(crypto, marketName))
-        if(orders['asks']):
-            bestAskOrder = orders['asks'][0]
-            for otherMarketName, otherOrderbook in marketsOrderbooks.items():
-                if(otherOrderbook[crypto]['bids']):
-                    print("Kup za: {}, sprzedaj za {}".format(bestAskOrder,otherOrderbook[crypto]['bids'][0]))
-                    if(float(bestAskOrder[0])<float(otherOrderbook[crypto]['bids'][0][0])):
-                        print("WARTO!")
+while(True):
+    btcToPln = getBtcToPln()
+    marketsOrderbooks = {}
+    marketsOrderbooks['tokok'] = getTokokMarket()
+    marketsOrderbooks['bitbay'] = getBitbayMarket()
+    marketsOrderbooks['biki'] = getBikiMarket()
+    marketsOrderbooks['latoken'] = getLatokenMarket()
+    for marketName, orderbook in marketsOrderbooks.items():
+        print(marketName)
+        for crypto, orders in orderbook.items():
+            print("Sprawdzam {} z {}".format(crypto, marketName))
+            if(orders['asks']):
+                bestAskOrder = orders['asks'][0]
+                for otherMarketName, otherOrderbook in marketsOrderbooks.items():
+                    if(otherOrderbook[crypto]['bids']):
+                        if(float(bestAskOrder[0])*(1+fees[marketName])<float(otherOrderbook[crypto]['bids'][0][0])*(1-fees[otherMarketName])):
+                            handleProfitableOffer(marketName, orders['asks'], otherMarketName, otherOrderbook[crypto]['bids'], crypto)
+    print("Ogolny profit to {} złotych".format(profit*btcToPln))
 
 
